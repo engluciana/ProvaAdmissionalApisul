@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace ProvaAdmissionalCSharpApisul
 {
@@ -13,8 +12,7 @@ namespace ProvaAdmissionalCSharpApisul
       {
         List<JsonInput> jsonsInput = JsonSerializer.Deserialize<List<JsonInput>>(readInput.text);
                 
-        ClassElevadorService elevadorService = new ClassElevadorService();
-        elevadorService.ElevadorStatistic(jsonsInput);
+        ClassElevadorService elevadorService = new ClassElevadorService(jsonsInput);       
 
         Console.WriteLine("Elevador mais usado:");
         foreach (var item in elevadorService.elevadorMaisFrequentado())
@@ -48,7 +46,7 @@ namespace ProvaAdmissionalCSharpApisul
         Console.WriteLine("Percentual de uso do Elevador D: " + elevadorService.percentualDeUsoElevadorD() +"%");
         Console.WriteLine("Percentual de uso do Elevador E: " + elevadorService.percentualDeUsoElevadorE() +"%");
 
-        Console.WriteLine("Andar mesnos utilizado pelos usuários: ");
+        Console.WriteLine("Andar menos utilizado pelos usuários: ");
         foreach(var i in elevadorService.andarMenosUtilizado())
         {
           Console.WriteLine(i);

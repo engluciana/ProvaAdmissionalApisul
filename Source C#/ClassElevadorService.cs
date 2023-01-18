@@ -12,11 +12,7 @@ namespace ProvaAdmissionalCSharpApisul
     public IEnumerable<JsonInput> elevadorB;
     public IEnumerable<JsonInput> elevadorC;
     public IEnumerable<JsonInput> elevadorD;
-    public IEnumerable<JsonInput> elevadorE;
-
-    public IEnumerable<JsonInput> turnoM;
-    public IEnumerable<JsonInput> turnoV;
-    public IEnumerable<JsonInput> turnoN;
+    public IEnumerable<JsonInput> elevadorE;    
 
     public Dictionary<char, int> elevadores;
     public Dictionary<char, int> turnos;
@@ -25,12 +21,14 @@ namespace ProvaAdmissionalCSharpApisul
 
     public float sizeInput;
 
-    public ClassElevadorService()
+    public ClassElevadorService(List<JsonInput> inputs)
     {
       elevadores = new Dictionary<char, int>();
       turnos = new Dictionary<char, int>();
+      entrada = new();
+      ElevadorStatistic(inputs);
     }
-
+    //Separa a entrada por Elevador e por turno
     public void ElevadorStatistic(List<JsonInput> inputs)
     {
       sizeInput= inputs.Count;
@@ -47,9 +45,9 @@ namespace ProvaAdmissionalCSharpApisul
       elevadores.Add('D', elevadorD.Count());
       elevadores.Add('E', elevadorE.Count());
 
-      turnoM = from input in inputs where input.turno.Equals("M") select input;
-      turnoV = from input in inputs where input.turno.Equals("V") select input;
-      turnoN = from input in inputs where input.turno.Equals("N") select input;
+      var turnoM = from input in inputs where input.turno.Equals("M") select input;
+      var turnoV = from input in inputs where input.turno.Equals("V") select input;
+      var turnoN = from input in inputs where input.turno.Equals("N") select input;
 
       turnos.Add('M', turnoM.Count());
       turnos.Add('V', turnoV.Count());
@@ -57,7 +55,97 @@ namespace ProvaAdmissionalCSharpApisul
 
       entrada = inputs;
     }
+    //De acordo com a lista recebida, seleciona o elevador para obter o turno de maior ou menor uso
+    // de acordo com a opção informada
+    public List<char> SelectElevadorForGetPeriodo(List<char>FreqElevador, int opcao)
+    {
+      List<char> ret = new();
+      foreach (var item in FreqElevador)
+      {
+        List<char> aux = new();
+        switch (item)
+        {
+          case 'A':
+            aux = GetPeriodoMenorMaior(elevadorA, opcao);
+            break;
+          case 'B':
+            aux = GetPeriodoMenorMaior(elevadorB, opcao);
+            break;
+          case 'C':
+            aux = GetPeriodoMenorMaior(elevadorC, opcao);
+            break;
+          case 'D':
+            aux = GetPeriodoMenorMaior(elevadorD, opcao);
+            break;
+          case 'E':
+            aux = GetPeriodoMenorMaior(elevadorE, opcao);
+            break;
+        }
+        foreach (var i in aux)
+        {
+          ret.Add(i);
+        }
+      }
+      return ret;
+    }    
+    // Retorna o turno mais usado ou menos usado de acordo com as opções:
+    // 0 -> turno menos usado
+    // 1 -> turno mais usado
+    public List<char> GetPeriodoMenorMaior(IEnumerable<JsonInput> elevador, int opcao)
+    {
+      List<char> ret = new();
+      Dictionary<char, int> periodo = new();
 
+      var m = from item in elevador where item.turno.Equals("M") select item;
+      var v = from item in elevador where item.turno.Equals("V") select item;
+      var n = from item in elevador where item.turno.Equals("N") select item;
+
+      periodo.Add('M', m.Count());
+      periodo.Add('V', v.Count());
+      periodo.Add('N', n.Count());
+
+      IOrderedEnumerable<KeyValuePair<char, int>> periodoOrdenado = null;
+      switch (opcao)
+      {
+        case 0:
+          periodoOrdenado = periodo.OrderBy(count => count.Value);
+          break;
+        case 1:
+          periodoOrdenado = periodo.OrderByDescending(count => count.Value);
+          break;
+        default:
+          break;
+      }
+      return GetUsoElevador(periodoOrdenado);
+    }
+    //Calcula o percentual de uso de um determinado elevador
+    public float PercentualUso(IEnumerable<JsonInput> elevadorX)
+    {
+      return (float)Math.Round(Convert.ToDouble((elevadorX.Count() / sizeInput)) * 100, 2);
+    }
+    //Retorna o uso ou turno de um ou mais elevadores de acordo com o parâmentro informado
+    public List<char> GetUsoElevador(IOrderedEnumerable<KeyValuePair<char, int>> usoElevador)
+    {
+      List<char> ret = new();
+      int count = 0;
+      foreach (var item in usoElevador)
+      {
+        if (ret.Count == 0)
+        {
+          ret.Add(item.Key);
+          count = item.Value;
+        }
+        else if (count == item.Value)
+        {
+          ret.Add(item.Key);
+        }
+        else
+        {
+          break;
+        }
+      }
+      return ret;
+    }
     public List<int> andarMenosUtilizado()
     {
       Dictionary<int, int> andares = new();
@@ -88,185 +176,24 @@ namespace ProvaAdmissionalCSharpApisul
       return ret;
     }
     public List<char> elevadorMaisFrequentado()
-    {
-      List<char> ret = new();
-      int elevadorCount = 0;
-      foreach (var item in elevadores.OrderByDescending(count => count.Value))
-      {
-        if (ret.Count == 0)
-        {
-          ret.Add(item.Key);
-          elevadorCount = item.Value;
-        }
-        else if (elevadorCount == item.Value)
-        {
-          ret.Add(item.Key);
-        }
-        else
-        {
-          break;
-        }
-      }
-      return ret;
-    }
+    {           
+      return GetUsoElevador(elevadores.OrderByDescending(count => count.Value));     
+    } 
     public List<char> periodoMaiorFluxoElevadorMaisFrequentado()
-    {
-      List<char> elevadores = elevadorMaisFrequentado();
-      List<char> ret = new();
-
-      foreach (var item in elevadores)
-      {
-        List<char> aux = new();
-        switch (item)
-        {
-          case 'A':
-            aux = GetPeriodoMenorMaior(elevadorA, 1);
-            break;
-          case 'B':
-            aux = GetPeriodoMenorMaior(elevadorB, 1);
-            break;
-          case 'C':
-            aux = GetPeriodoMenorMaior(elevadorC, 1);
-            break;
-          case 'D':
-            aux = GetPeriodoMenorMaior(elevadorD, 1);
-            break;
-          case 'E':
-            aux = GetPeriodoMenorMaior(elevadorE, 1);
-            break;
-        }
-        foreach (var i in aux)
-        {
-          ret.Add(i);
-        }
-      }
-      return ret;
+    {          
+      return SelectElevadorForGetPeriodo(elevadorMaisFrequentado(),1);
     }
     public List<char> elevadorMenosFrequentado()
     {
-      List<char> ret = new();
-      int elevadorCount = 0;
-      foreach (var item in elevadores.OrderBy(count => count.Value))
-      {
-        if (ret.Count == 0)
-        {
-          ret.Add(item.Key);
-          elevadorCount = item.Value;
-        }
-        else if (elevadorCount == item.Value)
-        {
-          ret.Add(item.Key);
-        }
-        else
-        {
-          break;
-        }
-      }
-
-      return ret;
+      return GetUsoElevador(elevadores.OrderBy(count => count.Value));      
     }
     public List<char> periodoMenorFluxoElevadorMenosFrequentado()
-    {
-      List<char> menosUsado = elevadorMenosFrequentado();
-      List<char> ret = new();
-
-      foreach (var item in menosUsado)
-      {
-        List<char> aux = new();
-        switch (item)
-        {
-          case 'A':
-            aux = GetPeriodoMenorMaior(elevadorA, 0);
-            break;
-          case 'B':
-            aux = GetPeriodoMenorMaior(elevadorB, 0);
-            break;
-          case 'C':
-            aux = GetPeriodoMenorMaior(elevadorC, 0);
-            break;
-          case 'D':
-            aux = GetPeriodoMenorMaior(elevadorD, 0);
-            break;
-          case 'E':
-            aux = GetPeriodoMenorMaior(elevadorE, 0);
-            break;
-        }
-        foreach (var i in aux)
-        {
-          ret.Add(i);
-        }
-      }
-      return ret;
-    }
-
-    public List<char> GetPeriodoMenorMaior(IEnumerable<JsonInput> elevador, int opcao)
-    {
-      List<char> ret = new();
-      Dictionary<char, int> periodo = new();
-
-      var m = from item in elevador where item.turno.Equals("M") select item;
-      var v = from item in elevador where item.turno.Equals("V") select item;
-      var n = from item in elevador where item.turno.Equals("N") select item;
-
-      periodo.Add('M', m.Count());
-      periodo.Add('V', v.Count());
-      periodo.Add('N', n.Count());
-
-      int countTurno = 0;
-      IOrderedEnumerable<KeyValuePair<char, int>> periodoOrdenado = null;
-      switch (opcao)
-      {
-        case 0:
-          periodoOrdenado = periodo.OrderBy(count => count.Value);
-          break;
-        case 1:
-          periodoOrdenado = periodo.OrderByDescending(count => count.Value);
-          break;
-        default:
-          break;
-      }
-      
-      foreach (var item in periodoOrdenado)
-      {
-        if (ret.Count == 0)
-        {
-          ret.Add(item.Key);
-          countTurno = item.Value;
-        }
-        else if (countTurno == item.Value)
-        {
-          ret.Add(item.Key);
-        }
-        else
-        {
-          break;
-        }
-      }
-      return ret;
-    }
-
+    {      
+      return SelectElevadorForGetPeriodo(elevadorMenosFrequentado(),0);
+    }   
     public List<char> periodoMaiorUtilizacaoConjuntoElevadores()
     {
-      List<char> ret = new();
-
-      int countTurno = 0;
-      foreach (var item in turnos.OrderByDescending(count => count.Value))
-      {
-        if (ret.Count == 0)
-        {
-          ret.Add(item.Key);
-          countTurno = item.Value;
-        }
-        else if (countTurno == item.Value)
-        {
-          ret.Add(item.Key);
-        }
-        else
-        {
-          break;
-        }
-      }
-      return ret;
+      return GetUsoElevador(turnos.OrderByDescending(count => count.Value));      
     }
     public float percentualDeUsoElevadorA()
     {
@@ -288,11 +215,5 @@ namespace ProvaAdmissionalCSharpApisul
     {
       return PercentualUso(elevadorE);
     }
-
-    public float PercentualUso(IEnumerable<JsonInput> elevadorX)
-    {          
-      return (float)Math.Round(Convert.ToDouble((elevadorX.Count()/sizeInput)) * 100,2);
-    }
-
   }
 }
